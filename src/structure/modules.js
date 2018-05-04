@@ -83,7 +83,7 @@ class Table {
 //
 //     mem ::= { type memtype }
 //
-class Memory {
+class Mem {
   constructor({type}) {
     assert(isInstance(type, MemType));
     this.type = type;

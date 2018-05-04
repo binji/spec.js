@@ -14,27 +14,23 @@
 // limitations under the License.
 //
 
-load('helpers.js');
-load('structure/types.js');
-load('structure/instructions.js');
-load('structure/modules.js');
-load('validation/conventions.js');
-load('validation/types.js');
-load('validation/instructions.js');
-load('validation/modules.js');
+// http://webassembly.github.io/spec/core/valid/instructions.html#expressions
+function exprIsValid(C, expr) {
+  assert(isInstance(C, Context));
+  assert(isInstance(expr, Expr));
+  // TODO
+  return false;
+}
 
-let f0 = new Func({type: 0, locals: [], body: new Expr([])});
-let t0 = new FuncType([], []);
+function exprIsValidWithResultType(C, expr, resulttype) {
+  let v = exprIsValid(C, expr);
+  if (!v) {
+    return false;
+  }
+  return v.result.equals(resulttype);
+}
 
-let c = new Context({
-  types: [t0],
-  funcs: [t0],
-  tables: [],
-  mems: [],
-  globals: [],
-  locals: [],
-  labels: [],
-  return: undefined,
-});
-
-print(funcIsValid(c, f0));
+function exprIsConstant(C, expr) {
+  // TODO
+  return false;
+}
