@@ -75,4 +75,14 @@ class Context {
     assert(this.isTable(idx));
     return this.tables[idx];
   }
+
+  isMem(idx) {
+    assert(isIndex(idx));
+    return idx < this.mems.length;
+  }
+
+  getMem(idx) {
+    assert(this.isMem(idx));
+    return this.mems[idx];
+  }
 }

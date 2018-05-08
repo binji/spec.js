@@ -171,6 +171,42 @@ class ExportDesc {
   }
 }
 
+// http://webassembly.github.io/spec/core/syntax/modules.html#exports
+//
+//     funcs(export*) = [funcidx | (func funcidx) ∈ (export.desc)*]
+//
+function funcsFromExports(exports) {
+  assert(isArrayOfInstance(exports, Export));
+  return exports.filter(e => e.desc.kind === 'func').map(e => e.desc.idx);
+}
+
+// http://webassembly.github.io/spec/core/syntax/modules.html#exports
+//
+//     tables(export*) = [tableidx | (table tableidx) ∈ (export.desc)*]
+//
+function tablesFromExports(exports) {
+  assert(isArrayOfInstance(exports, Export));
+  return exports.filter(e => e.desc.kind === 'table').map(e => e.desc.idx);
+}
+
+// http://webassembly.github.io/spec/core/syntax/modules.html#exports
+//
+//     mems(export*) = [memidx | (mem memidx) ∈ (export.desc)*]
+//
+function memsFromExports(exports) {
+  assert(isArrayOfInstance(exports, Export));
+  return exports.filter(e => e.desc.kind === 'mem').map(e => e.desc.idx);
+}
+
+// http://webassembly.github.io/spec/core/syntax/modules.html#exports
+//
+//     globals(export*) = [globalidx | (global globalidx) ∈ (export.desc)*]
+//
+function globalsFromExports(exports) {
+  assert(isArrayOfInstance(exports, Export));
+  return exports.filter(e => e.desc.kind === 'global').map(e => e.desc.idx);
+}
+
 // http://webassembly.github.io/spec/core/syntax/modules.html#imports
 //
 //     import ::= { module name, name name, desc importdesc }
@@ -188,14 +224,30 @@ class Import {
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#imports
 //
-//     importdesc ::= func funcidx | table tableidx
-//                  | mem memidx | global globalidx
+//     importdesc ::= func typeidx | table tabletype
+//                  | mem memtype | global globaltype
 //
 class ImportDesc {
-  constructor(kind, idx) {
+  constructor(kind, value) {
     assert(isEnumValue(kind, ExternType.kinds));
     assert(isIndex(idx));
     this.kind = kind;
-    this.idx = idx;
+    switch (kind) {
+      case 'func':
+        this.typeidx = value;
+        break;
+
+      case 'table':
+        this.tabletype = value;
+        break;
+
+      case 'mem':
+        this.memtype = value;
+        break;
+
+      case 'global':
+        this.globaltype = value;
+        break;
+    }
   }
 }

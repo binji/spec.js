@@ -186,3 +186,39 @@ class ExternType {
 }
 
 ExternType.kinds = ['func', 'table', 'mem', 'global'];
+
+// http://webassembly.github.io/spec/core/syntax/types.html#external-types
+//
+//     funcs(externtype*) = [functype | (func functype) ∈ externtype*]
+//
+function funcsFromExternTypes(externtypes) {
+  assert(isArrayOfInstance(externtypes, ExternType));
+  return externtypes.filter(et => et.kind === 'func').map(et => et.type);
+}
+
+// http://webassembly.github.io/spec/core/syntax/types.html#external-types
+//
+//     tables(externtype*) = [tabletype | (table tabletype) ∈ externtype*]
+//
+function tablesFromExternTypes(externtypes) {
+  assert(isArrayOfInstance(externtypes, ExternType));
+  return externtypes.filter(et => et.kind === 'table').map(et => et.type);
+}
+
+// http://webassembly.github.io/spec/core/syntax/types.html#external-types
+//
+//     mems(externtype*) = [memtype | (mem memtype) ∈ externtype*]
+//
+function memsFromExternTypes(externtypes) {
+  assert(isArrayOfInstance(externtypes, ExternType));
+  return externtypes.filter(et => et.kind === 'mem').map(et => et.type);
+}
+
+// http://webassembly.github.io/spec/core/syntax/types.html#external-types
+//
+//     globals(externtype*) = [globaltype | (global globaltype) ∈ externtype*]
+//
+function globalsFromExternTypes(externtypes) {
+  assert(isArrayOfInstance(externtypes, ExternType));
+  return externtypes.filter(et => et.kind === 'global').map(et => et.type);
+}
