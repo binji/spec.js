@@ -57,7 +57,7 @@ class ResultType {
 
 // https://webassembly.github.io/spec/core/syntax/types.html#function-types
 //
-//     functype ::= [vec(valtype)] -> [vec(valtype)]
+//     functype ::= [vec(valtype)] → [vec(valtype)]
 //
 class FuncType {
   constructor(params, results) {

@@ -33,7 +33,7 @@ function limitsIsValid(limits) {
 
 // http://webassembly.github.io/spec/core/valid/types.html#function-types
 //
-//     [t_1^n] -> [t_2^m]
+//     [t₁ⁿ] → [t₂ᵐ]
 //
 // * The arity `m` must not be larger than 1.
 // * Then the function type is valid.

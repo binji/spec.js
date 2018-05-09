@@ -21,41 +21,41 @@
 function funcIsValid(C, func) {
   assert(isInstance(C, Context));
   assert(isInstance(func, Func));
-  let {type: x, locals: t, body: expr} = func;
+  let {type: x, locals: t_star, body: expr} = func;
 
   // The type `C.types[x]` must be defined in the context.
   if (!C.isType(x)) {
     return false;
   }
 
-  // Let `[t_1^*] -> [t_2^?]` be the function type `C.types[x]`.
+  // Let `[t₁*] → [t₂?]` be the function type `C.types[x]`.
   let functype = C.getType(x);
   let {params: t1, results: [t2]} = functype;
 
   // Let C' be the same context as C, but with:
   let resulttype = new ResultType(t2);
-  let C1 = new Context({
+  let C_prime = new Context({
     types: C.types,
     funcs: C.funcs,
     tables: C.tables,
     mems: C.mems,
     globals: C.globals,
-    // `locals` set to the sequence of value types `t_1* t*`, concatenating
+    // `locals` set to the sequence of value types `t₁* t*`, concatenating
     // parameters and locals.
-    locals: t1.concat(t),
+    locals: t1.concat(t_star),
     // `labels` set to the singular sequence containing only result type
-    // `[t_2^?]`.
+    // `[t₂?]`.
     labels: [resulttype],
-    // `return` set to the result type `[t_2^?]`.
+    // `return` set to the result type `[t₂?]`.
     return: resulttype
   });
 
-  // Under the Context C', the expression expr must be valid with type `t_2^?`.
-  if (!exprIsValidWithResultType(C1, expr, resulttype)) {
+  // Under the Context C', the expression expr must be valid with type `t₂?`.
+  if (!exprIsValidWithResultType(C_prime, expr, resulttype)) {
     return false;
   }
 
-  // Then the function definition is valid with type `[t_1^*] -> [t_2^?]`.
+  // Then the function definition is valid with type `[t₁*] → [t₂?]`.
   return functype;
 }
 
@@ -130,7 +130,7 @@ function globalIsValid(C, global) {
 function elemIsValid(C, elem) {
   assert(isInstance(C, Context));
   assert(isInstance(elem, Elem));
-  let {table: x, offset: expr, init: y} = elem;
+  let {table: x, offset: expr, init: y_star} = elem;
 
   // The table `C.tables[x]` must be defined in the context.
   if (!C.isTable(x)) {
@@ -155,10 +155,10 @@ function elemIsValid(C, elem) {
     return false;
   }
 
-  // For each `y_i` in `y*`, the function `C.funcs[y_i]` must be defined in
+  // For each `yᵢ` in `y*`, the function `C.funcs[yᵢ]` must be defined in
   // the context.
-  for (let yi of y) {
-    if (!C.isFunc(yi)) {
+  for (let y_i of y_star) {
+    if (!C.isFunc(y_i)) {
       return false;
     }
   }
@@ -174,7 +174,7 @@ function elemIsValid(C, elem) {
 function dataIsValid(C, data) {
   assert(isInstance(C, Context));
   assert(isInstance(data, Data));
-  let {data: x, offset: expr, init: b} = data;
+  let {data: x, offset: expr, init: b_star} = data;
 
   // The memory `C.mem[x]` must be defined in the context.
   if (!C.isMem(x)) {
@@ -209,7 +209,7 @@ function startIsValid(C, start) {
     return false;
   }
 
-  // The type of `C.funcs[x]` must be `[] -> []`.
+  // The type of `C.funcs[x]` must be `[] → []`.
   let func = C.getFunc(x);
   if (!(func.params.length == 0 && funcs.results.length == 0)) {
     return false;
@@ -343,11 +343,11 @@ function exportDescIsValid(C, exportDesc) {
         return false;
       }
 
-      // Let `[t_1^*] -> [t_2^*]` be the function type `C.types[x]`.
+      // Let `[t₁*] → [t₂*]` be the function type `C.types[x]`.
       let functype = C.getType(x);
 
       // Then the import description is valid with type
-      // `func [t_1^*] -> [t_2^*]`.
+      // `func [t₁*] → [t₂*]`.
       return new ExternType('func', functype);
 
     case 'table':
@@ -423,8 +423,8 @@ function moduleIsValid(module) {
   });
 
   // Let C' be the context where `C'.globals` is the sequence
-  // `globals(externtype_i^*)` and all other fields are empty.
-  let C1 = new Context({
+  // `globals(externtypeᵢ*)` and all other fields are empty.
+  let C_prime = new Context({
     types: [],
     funcs: [],
     tables: [],
