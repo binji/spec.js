@@ -23,18 +23,19 @@ load('validation/types.js');
 load('validation/instructions.js');
 load('validation/modules.js');
 
-let f0 = new Func({type: 0, locals: [], body: new Expr([])});
 let t0 = new FuncType([], []);
+let f0 = new Func({type: 0, locals: [], body: new Expr([])});
 
-let c = new Context({
+let m0 = new Module({
   types: [t0],
-  funcs: [t0],
+  funcs: [f0],
   tables: [],
   mems: [],
   globals: [],
-  locals: [],
-  labels: [],
-  return: undefined,
+  elem: [],
+  data: [],
+  imports: [],
+  exports: []
 });
 
-print(funcIsValid(c, f0));
+print(moduleIsValid(m0));

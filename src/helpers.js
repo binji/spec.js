@@ -51,3 +51,18 @@ function isArrayWithEvery(o, f) {
 function isArrayOfInstance(o, type) {
   return isArrayWithEvery(o, x => x instanceof type);
 }
+
+function allTrue(a) {
+  return a.every(x => x);
+}
+
+function areDistinct(a) {
+  let set = new Set();
+  for (let x of a) {
+    if (set.has(x)) {
+      return false;
+    }
+    set.add(x);
+  }
+  return true;
+}
