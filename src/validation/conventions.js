@@ -14,6 +14,14 @@
 // limitations under the License.
 //
 
+class ValidationError extends Error {}
+
+function validationErrorUnless(test, message) {
+  if (!test) {
+    throw new ValidationError(message);
+  }
+}
+
 // http://webassembly.github.io/spec/core/valid/conventions.html#contexts
 //
 //    C ::= { types functype*,

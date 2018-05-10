@@ -183,51 +183,67 @@ function exprIsValid(C, expr) {
   assert(isInstance(expr, Expr));
 
   let v = new ValidationAlgorithm();
+  //
+  //     instr* end
+  //
+  // * The instruction sequence `instr*` must be valid with type [] → [t?],
+  //   for some optional value type t?.
   for (let instr of expr.instrs) {
-    if (instr instanceof ConstInstr) {
-      constInstrIsValid(v, instr);
-    } else if (instr instanceof UnopInstr) {
-      unopInstrIsValid(v, instr);
-    } else if (instr instanceof BinopInstr) {
-      binopInstrIsValid(v, instr);
-    } else if (instr instanceof TestopInstr) {
-      testopInstrIsValid(v, instr);
-    } else if (instr instanceof RelopInstr) {
-      relopInstrIsValid(v, instr);
-    } else if (instr instanceof CvtopInstr) {
-      cvtopInstrIsValid(v, instr);
-    } else if (instr instanceof ParametricInstr) {
-      switch (instr.kind) {
-        case 'drop':
-          dropInstrIsValid(v, instr);
-          break;
+    instrIsValid(v, instr);
+  }
 
-        case 'select':
-          selectInstrIsValid(v, instr);
-          break;
-      }
-    } else if (instr instanceof VariableInstr) {
-      switch (instr.kind) {
-        case 'get_local':
-          getLocalInstrIsValid(C, v, instr);
-          break;
-        case 'set_local':
-          setLocalInstrIsValid(C, v, instr);
-          break;
-        case 'tee_local':
-          teeLocalInstrIsValid(C, v, instr);
-          break;
-        case 'get_global':
-          getGlobalInstrIsValid(C, v, instr);
-          break;
-        case 'set_global':
-          setGlobalInstrIsValid(C, v, instr);
-          break;
-      }
+  validationErrorUnless(v.opds.length <= 1,
+      `The instruction sequence must be valid with type [] → [t?]`);
+
+  // * Then the expression is valid with result type [t?].
+  return new ResultType(v.opds[0]);
+}
+
+function instrIsValid(v, instr) {
+  if (instr instanceof ConstInstr) {
+    constInstrIsValid(v, instr);
+  } else if (instr instanceof UnopInstr) {
+    unopInstrIsValid(v, instr);
+  } else if (instr instanceof BinopInstr) {
+    binopInstrIsValid(v, instr);
+  } else if (instr instanceof TestopInstr) {
+    testopInstrIsValid(v, instr);
+  } else if (instr instanceof RelopInstr) {
+    relopInstrIsValid(v, instr);
+  } else if (instr instanceof CvtopInstr) {
+    cvtopInstrIsValid(v, instr);
+  } else if (instr instanceof ParametricInstr) {
+    switch (instr.kind) {
+      case 'drop':
+        dropInstrIsValid(v, instr);
+        break;
+
+      case 'select':
+        selectInstrIsValid(v, instr);
+        break;
+    }
+  } else if (instr instanceof VariableInstr) {
+    switch (instr.kind) {
+      case 'get_local':
+        getLocalInstrIsValid(C, v, instr);
+        break;
+      case 'set_local':
+        setLocalInstrIsValid(C, v, instr);
+        break;
+      case 'tee_local':
+        teeLocalInstrIsValid(C, v, instr);
+        break;
+      case 'get_global':
+        getGlobalInstrIsValid(C, v, instr);
+        break;
+      case 'set_global':
+        setGlobalInstrIsValid(C, v, instr);
+        break;
     }
   }
 
-  return false;
+  // Unhandled instr kind.
+  assert(false);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-const
@@ -326,9 +342,8 @@ function getLocalInstrIsValid(C, v, instr) {
   //     get_local x
   //
   // * The local `C.locals[x]` must be defined in the context.
-  if (!C.isLocal(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isLocal(x),
+      `The local C.locals[${x}] must be defined in the context.`);
 
   // * Let `t` be the value type `C.locals[x]`.
   let t = C.getLocal(x);
@@ -343,9 +358,8 @@ function setLocalInstrIsValid(C, v, instr) {
   //     set_local x
   //
   // * The local `C.locals[x]` must be defined in the context.
-  if (!C.isLocal(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isLocal(x),
+      `The local C.locals[${x}] must be defined in the context.`);
 
   // * Let `t` be the value type `C.locals[x]`.
   let t = C.getLocal(x);
@@ -360,9 +374,8 @@ function teeLocalInstrIsValid(C, v, instr) {
   //     set_local x
   //
   // * The local `C.locals[x]` must be defined in the context.
-  if (!C.isLocal(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isLocal(x),
+      `The local C.locals[${x}] must be defined in the context.`);
 
   // * Let `t` be the value type `C.locals[x]`.
   let t = C.getLocal(x);
@@ -379,9 +392,8 @@ function getGlobalInstrIsValid(C, v, instr) {
   //     get_global x
   //
   // * The global `C.globals[x]` must be defined in the context.
-  if (!C.isGlobal(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isGlobal(x),
+      `The global C.globals[${x}] must be defined in the context.`);
 
   // * Let `mut t` be the global type `C.globals[x]`.
   let {mut, valtype: t} = C.getGlobal(x);
@@ -396,17 +408,14 @@ function setGlobalInstrIsValid(C, v, instr) {
   //     set_global x
   //
   // * The global `C.globals[x]` must be defined in the context.
-  if (!C.isGlobal(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isGlobal(x),
+      `The global C.globals[${x}] must be defined in the context.`);
 
   // * Let `mut t` be the global type `C.globals[x]`.
   let {mut, valtype: t} = C.getGlobal(x);
 
   // * The mutability mut must be var.
-  if (mut !== Mut['var']) {
-    return false;
-  }
+  validationErrorUnless(mut === Mut.var, `The mutability ${mut} must be var.`);
 
   // * Then the instruction is valid with type [t] → [].
   v.popOpdExpect(t);
@@ -414,13 +423,12 @@ function setGlobalInstrIsValid(C, v, instr) {
 
 function exprIsValidWithResultType(C, expr, resulttype) {
   let v = exprIsValid(C, expr);
-  if (!v) {
-    return false;
-  }
-  return v.result.equals(resulttype);
+  validationErrorUnless(v.equals(resulttype),
+      `The expression must be valid with result type ${resulttype} (got ${v.resulttype})`);
+  return true;
 }
 
 function exprIsConstant(C, expr) {
   // TODO
-  return false;
+  validationErrorUnless(false, `TODO`);
 }

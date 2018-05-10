@@ -25,10 +25,10 @@
 function limitsIsValid(limits) {
   assert(isInstance(limits, Limits));
   if (isUndefined(limits.max)) {
-    return limits.min <= limits.max;
-  } else {
-    return true;
+    validationErrorUnless(limits.min <= limits.max,
+        `limits min (${limits.min}) must not be smaller than its max (${limits.max})`);
   }
+  return true;
 }
 
 // http://webassembly.github.io/spec/core/valid/types.html#function-types
@@ -40,7 +40,9 @@ function limitsIsValid(limits) {
 //
 function funcTypeIsValid(functype) {
   assert(isInstance(functype, FuncType));
-  return functype.results.length <= 1;
+  validationErrorUnless(functype.results.length <= 1,
+      `funcType arity (${functype.results.length}) must not be larger than 1`);
+  return true;
 }
 
 // http://webassembly.github.io/spec/core/valid/types.html#table-types

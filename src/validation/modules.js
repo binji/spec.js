@@ -24,9 +24,8 @@ function funcIsValid(C, func) {
   let {type: x, locals: t_star, body: expr} = func;
 
   // The type `C.types[x]` must be defined in the context.
-  if (!C.isType(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isType(x),
+      `The type C.types[${x}] must be defined in the context`);
 
   // Let `[t₁*] → [t₂?]` be the function type `C.types[x]`.
   let functype = C.getType(x);
@@ -51,9 +50,7 @@ function funcIsValid(C, func) {
   });
 
   // Under the Context C', the expression expr must be valid with type `t₂?`.
-  if (!exprIsValidWithResultType(C_prime, expr, resulttype)) {
-    return false;
-  }
+  exprIsValidWithResultType(C_prime, expr, resulttype);
 
   // Then the function definition is valid with type `[t₁*] → [t₂?]`.
   return functype;
@@ -68,9 +65,7 @@ function tableIsValid(C, table) {
   assert(isInstance(table, Table));
 
   // The table type `tabletype` must be valid.
-  if (!tableTypeIsValid(table.type)) {
-    return false;
-  }
+  tableTypeIsValid(table.type);
 
   // Then the table definition is valid with type `tabletype`.
   return table.type;
@@ -85,9 +80,7 @@ function memIsValid(C, mem) {
   assert(isInstance(mem, Mem));
 
   // The memory type `memtype` must be valid.
-  if (!memTypeIsValid(mem.type)) {
-    return false;
-  }
+  memTypeIsValid(mem.type);
 
   // Then the memory definition is valid with type `memtype`.
   return mem.type;
@@ -104,20 +97,14 @@ function globalIsValid(C, global) {
   let {mut, valtype: t} = globaltype;
 
   // The global type `mut t` must be valid.
-  if (!globalTypeIsValid(globaltype)) {
-    return false;
-  }
+  globalTypeIsValid(globaltype);
 
   // The expression `expr` must be valid with result type [t].
   let resulttype = new ResultType(t);
-  if (!exprIsValidWithResultType(C, expr, resulttype)) {
-    return false;
-  }
+  exprIsValidWithResultType(C, expr, resulttype);
 
   // The expression `expr` must be constant.
-  if (!exprIsConstant(C, expr)) {
-    return false;
-  }
+  exprIsConstant(C, expr);
 
   // Then the global definition is valid with type `mut t`.
   return globaltype;
@@ -133,34 +120,27 @@ function elemIsValid(C, elem) {
   let {table: x, offset: expr, init: y_star} = elem;
 
   // The table `C.tables[x]` must be defined in the context.
-  if (!C.isTable(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isTable(x),
+      `The table C.tables[${x}] must be defined in the context`);
 
   // Let `limits elemtype` be the table type `C.tables[x]`.
   let {limits, elemtype} = C.getTable(x);
 
   // The element type `elemtype` must be `anyfunc`.
-  if (elemtype != ElemType.anyfunc) {
-    return false;
-  }
+  validationErrorUnless(elemtype != ElemType.anyfunc,
+      `The element type ${elemtype} must be anyfunc`);
 
   // The expression `expr` must be valid with result type `[i32]`.
-  if (!exprIsValidWithResultType(C, expr, new ResultType(ValType.i32))) {
-    return false;
-  }
+  exprIsValidWithResultType(C, expr, new ResultType(ValType.i32));
 
   // The expression `expr` must be constant.
-  if (!exprIsConstant(C, expr)) {
-    return false;
-  }
+  exprIsConstant(C, expr);
 
   // For each `yᵢ` in `y*`, the function `C.funcs[yᵢ]` must be defined in
   // the context.
   for (let y_i of y_star) {
-    if (!C.isFunc(y_i)) {
-      return false;
-    }
+    validationErrorUnless(C.isFunc(y_i),
+        `The function C.funcs[${y_i}] must be defined in the context`);
   }
 
   // Then the element segment is valid.
@@ -177,19 +157,14 @@ function dataIsValid(C, data) {
   let {data: x, offset: expr, init: b_star} = data;
 
   // The memory `C.mem[x]` must be defined in the context.
-  if (!C.isMem(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isMem(x),
+      `The memory C.mem[${x}] must be defined in the context.`);
 
   // The expression `expr` must be valid with result type `[i32]`.
-  if (!exprIsValidWithResultType(C, expr, new ResultType(ValType.i32))) {
-    return false;
-  }
+  exprIsValidWithResultType(C, expr, new ResultType(ValType.i32));
 
   // The expression `epxr` must be constant.
-  if (!exprIsConstant(C, expr)) {
-    return false;
-  }
+  exprIsConstant(C, expr);
 
   // Then the data segment is valid.
   return true;
@@ -205,15 +180,13 @@ function startIsValid(C, start) {
   let {func: x} = start;
 
   // The memory `C.funcs[x]` must be defined in the context.
-  if (!C.isFunc(x)) {
-    return false;
-  }
+  validationErrorUnless(C.isFunc(x),
+      `The memory C.funcs[${x}] must be defined in the context.`);
 
   // The type of `C.funcs[x]` must be `[] → []`.
   let func = C.getFunc(x);
-  if (!(func.params.length == 0 && funcs.results.length == 0)) {
-    return false;
-  }
+  validationErrorUnless(func.params.length == 0 && funcs.results.length == 0,
+      `The type of the start function (C.funcs[${x}]) must be [] → []`);
 
   // Then the start function is valid.
   return true;
@@ -231,9 +204,6 @@ function exportIsValid(C, export_) {
   // The export description `exportdesc` must be valid with the external type
   // `externtype`.
   let v = exportDescIsValid(C, exportdesc);
-  if (!v) {
-    return false;
-  }
 
   // Then the export is valid with external type `externtype`.
   return v;
@@ -255,9 +225,8 @@ function exportDescIsValid(C, exportDesc) {
   switch (exportDesc.kind) {
     case 'func':
       // The function `C.funcs[x]` must be defined in the context.
-      if (!C.isFunc(x)) {
-        return false;
-      }
+      validationErrorUnless(C.isFunc(x),
+          `The function C.funcs[${x}] must be defined in the context.`);
 
       // Then the export description is valid with external type `func
       // C.funcs[x]`.
@@ -265,9 +234,8 @@ function exportDescIsValid(C, exportDesc) {
 
     case 'table':
       // The table `C.tables[x]` must be defined in the context.
-      if (!C.isTable(x)) {
-        return false;
-      }
+      validationErrorUnless(C.isTable(x),
+          `The table C.tables[${x}] must be defined in the context.`);
 
       // Then the export description is valid with external type `table
       // C.tables[x]`.
@@ -275,9 +243,8 @@ function exportDescIsValid(C, exportDesc) {
 
     case 'mem':
       // The memory `C.mems[x]` must be defined in the context.
-      if (!C.isMem(x)) {
-        return false;
-      }
+      validationErrorUnless(C.isMem(x),
+          `The memory C.mems[${x}] must be defined in the context.`);
 
       // Then the export description is valid with external type `mem
       // C.mems[x]`.
@@ -285,18 +252,16 @@ function exportDescIsValid(C, exportDesc) {
 
     case 'global':
       // The global `C.globals[x]` must be defined in the context.
-      if (!C.isGlobal(x)) {
-        return false;
-      }
+      validationErrorUnless(C.isGlobal(x),
+          `The global C.globals[${x}] must be defined in the context.`);
 
       // Let `mut t` be the global type `C.globals[x]`.
       let globaltype = C.getGlobal(x);
       let {mut, valtype: t} = globaltype;
 
       // The mutability `mut` must be `const`.
-      if (mut != Mut.const) {
-        return false;
-      }
+      validationErrorUnless(mut === Mut.const,
+          `The mutability mut (${mut}) must be const.`);
 
       // Then the export description is valid with external type `global
       // C.globals[x]`.
@@ -315,9 +280,6 @@ function importIsValid(C, import_) {
 
   // The import description `importdesc` must be valid with type `externtype`.
   let v = importDescIsValid(C, importdesc);
-  if (!v) {
-    return false;
-  }
 
   // Then the import is valid with `externtype`.
   return v;
@@ -339,9 +301,8 @@ function importDescIsValid(C, importDesc) {
       let x = importDesc.typeidx;
 
       // The function `C.types[x]` must be defined in the context.
-      if (!C.isType(x)) {
-        return false;
-      }
+      validationErrorUnless(C.isType(x),
+          `The function C.types[${x}] must be defined in the context.`);
 
       // Let `[t₁*] → [t₂*]` be the function type `C.types[x]`.
       let functype = C.getType(x);
@@ -354,9 +315,7 @@ function importDescIsValid(C, importDesc) {
       let tabletype = importDesc.tabletype;
 
       // The table type `tabletype` must be valid.
-      if (!tableTypeIsValid(tabletype)) {
-        return false;
-      }
+      tableTypeIsValid(tabletype);
 
       // Then the import description is valid with type table `table tabletype`.
       return new ExternType('table', tabletype);
@@ -365,9 +324,7 @@ function importDescIsValid(C, importDesc) {
       let memtype = importDesc.memtype;
 
       // The memory `C.mems[x]` must be defined in the context.
-      if (!memTypeIsValid(memtype)) {
-        return false;
-      }
+      memTypeIsValid(memtype);
 
       // Then the import description is valid with type `mem memtype`.
       return new ExternType('mem', memtype);
@@ -376,14 +333,11 @@ function importDescIsValid(C, importDesc) {
       let globaltype = importDesc.globaltype;
 
       // The global type `globaltype` must be valid.
-      if (!globalTypeIsValid(globaltype)) {
-        return false;
-      }
+      globalTypeIsValid(globaltype);
 
       // The mutability of `globaltype` must be `const`.
-      if (globaltype.mut != Mut.const) {
-        return false;
-      }
+      validationErrorUnless(globaltype.mut === Mut.const,
+          `The mutability of globaltype (${globaltype.mut}) must be const.`);
 
       // Then the import description is valid with type `global globaltype`.
       return new ExternType('global', globaltype);
@@ -396,10 +350,12 @@ function moduleIsValid(module) {
 
   // Let `ft*` be the concatenation of the internal function types `ftᵢ`, in
   // index order.
-  let ft_star = module.funcs.map(f => module.types[f.type]);
-  if (!isArrayOfInstance(ft_star, FuncType)) {
-    return false;
-  }
+  let ft_star = module.funcs.map(f => {
+    // N.B. partial reimplementation of funcIsValid.
+    validationErrorUnless(f.type < module.types.length,
+        `The type C.type[${f.type}] must be defined in the context.`);
+    return module.types[f.type];
+  });
 
   // Let `tt*` be the concatenation of the internal table types `ttᵢ`, in
   // index order.
@@ -430,9 +386,6 @@ function moduleIsValid(module) {
   // For each `importᵢ` in `module.imports`, the segment `importᵢ` must be
   // valid with an external type `itᵢ`.
   let it_star = module.imports.map(import_i => importIsValid(C0, import_i));
-  if (!isArrayOfInstance(it_star, ExternType)) {
-    return false;
-  }
 
   // Let C be a context where:
   let C = new Context({
@@ -479,35 +432,32 @@ function moduleIsValid(module) {
 
   // For each `functypeᵢ` in `module.types`, the function type `functypeᵢ`
   // must be valid.
-  if (!allTrue(module.types.map(t => funcTypeIsValid(t)))) {
-    return false;
+  for (let functype_i of module.types) {
+    funcTypeIsValid(functype_i);
   }
 
   // For each `funcᵢ` in `module.funcs`, the definition `funcᵢ` must be valid
   // with a function type `ftᵢ`.
   for (let [i, func_i] of module.funcs.entries()) {
     let ft_i = funcIsValid(C, func_i);
-    if (ft_i !== ft_star[i]) {
-      return false;
-    }
+    validationErrorUnless(ft_i === ft_star[i],
+        `The definition funcᵢ must be valid with a function type ftᵢ.`);
   }
 
   // For each `tableᵢ` in `module.tables`, the definition `tableᵢ` must be
   // valid with table type `ttᵢ`.
   for (let [i, table_i] of module.tables.entries()) {
     let tt_i = tableIsValid(C, table_i);
-    if (tt_i !== tt_star[i]) {
-      return false;
-    }
+    validationErrorUnless(tt_i === tt_star[i],
+        `The definition tableᵢ must be valid with a table type ttᵢ.`);
   }
 
   // For each `memᵢ` in `module.mems`, the definition `memᵢ` must be valid
   // with memory type `mtᵢ`.
   for (let [i, mem_i] of module.mems.entries()) {
     let mt_i = memIsValid(C, mem_i);
-    if (mt_i !== mt_star[i]) {
-      return false;
-    }
+    validationErrorUnless(mt_i === mt_star[i],
+        `The definition memᵢ must be valid with a memory type mtᵢ.`);
   }
 
   // For each `globalᵢ` in `module.globals`:
@@ -515,49 +465,41 @@ function moduleIsValid(module) {
   //   global type gtᵢ.
   for (let [i, global_i] of module.globals.entries()) {
     let gt_i = globalIsValid(C_prime, global_i);
-    if (gt_i !== gt_star[i]) {
-      return false;
-    }
+    validationErrorUnless(gt_i === gt_star[i],
+        `The definition globalᵢ must be valid with a global type gtᵢ.`);
   }
 
   // For each `elemᵢ` in `module.elem`, the segment `elemᵢ` must be valid.
-  if (!allTrue(module.elem.map(elem_i => elemIsValid(C, elem_i)))) {
-    return false;
+  for (let elem_i of module.elem) {
+    elemIsValid(C, elem_i);
   }
 
   // For each `dataᵢ` in `module.data`, the segment `dataᵢ` must be valid.
-  if (!allTrue(module.data.map(data_i => dataIsValid(C, data_i)))) {
-    return false;
+  for (let data_i of module.data) {
+    dataIsValid(C, data_i);
   }
 
   // If module.start is non-empty, then module.start must be valid.
   if (module.start) {
-    if (!startIsValid(module.start)) {
-      return false;
-    }
+    startIsValid(module.start);
   }
 
   // For each `exportᵢ` in `module.exports`, the segment `exportᵢ` must be
   // valid with an external type `etᵢ`.
   let et_star = module.imports.map(export_i => exportIsValid(C, export_i));
-  if (!isArrayOfInstance(et_star, ExternType)) {
-    return false;
-  }
 
   // The length of `C.tables` must not be larger than 1.
-  if (C.tables.length > 1) {
-    return false;
-  }
+  validationErrorUnless(C.tables.length <= 1,
+      `The length of C.tables (${C.tables.length}) must not be larger than 1.`);
 
   // The length of `C.mems` must not be larger than 1.
-  if (C.mems.length > 1) {
-    return false;
-  }
+  validationErrorUnless(C.mems.length <= 1,
+      `The length of C.mems (${C.mems.length}) must not be larger than 1.`);
 
   // All export names `exportᵢ.name` must be different.
-  if (!areDistinct(module.exports.map(export_i => export_i.name))) {
-    return false;
-  }
+  validationErrorUnless(
+      areDistinct(module.exports.map(export_i => export_i.name)),
+      `All export names must be different`);
 
   // Then the module is valid with external types `it* → et*`.
   return true;  // TODO: return proper type.
