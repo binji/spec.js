@@ -46,12 +46,21 @@ ValType.f64 = new ValType('f64', 8);
 class ResultType {
   constructor(valtype) {
     assert(isOptionalInstance(valtype, ValType));
-    this.resulttype = valtype
+    this.resulttype = isUndefined(valtype) ? [] : [valtype];
   }
 
   equals(other) {
-    return isInstance(other, ResultType) &&
-        this.resulttype === other.resulttype;
+    assert(isInstance(other, ResultType));
+    if (this.resulttype.length !== other.resulttype.length) {
+      return false;
+    }
+
+    if (this.resulttype.length > 0 &&
+        this.resulttype[0] !== other.resulttype[0]) {
+      return false;
+    }
+
+    return true;
   }
 }
 

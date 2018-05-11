@@ -22,9 +22,14 @@ load('validation/conventions.js');
 load('validation/types.js');
 load('validation/instructions.js');
 load('validation/modules.js');
+load('appendix/algorithm.js');
 
 let t0 = new FuncType([], []);
-let f0 = new Func({type: 0, locals: [], body: new Expr([])});
+let f0 = new Func({type: 0, locals: [], body: new Expr([
+  instrs.get('i32.const')(1),
+  instrs.get('i32.const')(2),
+  instrs.get('i32.add'),
+])});
 
 let m0 = new Module({
   types: [t0],

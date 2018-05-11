@@ -50,7 +50,7 @@ function funcIsValid(C, func) {
   });
 
   // * Under the Context C', the expression expr must be valid with type `t₂?`.
-  exprIsValidWithResultType(C_prime, expr, resulttype);
+  exprIsValidWithResultType(C_prime, v, expr, resulttype);
 
   // * Then the function definition is valid with type `[t₁*] → [t₂?]`.
   return functype;

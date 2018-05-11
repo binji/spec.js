@@ -14,231 +14,151 @@
 // limitations under the License.
 //
 
+// http://webassembly.github.io/spec/core/valid/instructions.html#instruction-sequences
 // http://webassembly.github.io/spec/core/appendix/algorithm.html#validation-algorithm
-//
-// The algorithm uses two separate stacks: the operand stack and the control
-// stack. The former tracks the types of operand values on the stack, the
-// latter surrounding structured control instructions and their associated
-// blocks.
+function instrSequenceIsValid(C, instrs) {
+  assert(isInstance(C, Context));
+  assert(isArrayOfInstance(instrs, Instr));
 
-const unknown = undefined;
-const isOperand = (x) => isOptionalInstance(x, ValType);
-
-// http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
-//
-//     type ctrl_frame = {
-//       label_types : list(val_type)
-//       end_types : list(val_type)
-//       height : nat
-//       unreachable : bool
-//     }
-//
-class CtrlFrame {
-  constructor(labelTypes, endTypes, height, unreachable) {
-    assert(isArrayOfInstance(labelTypes, ValType));
-    assert(isArrayOfInstance(endTypes, ValType));
-    assert(isNumber(height));
-    assert(isBool(unreachable));
-
-    this.labelTypes = labelTypes;
-    this.endTypes = endTypes;
-    this.height = height;
-    this.unreachable = unreachable;
+  for (let instr of instrs) {
+    instrIsValid(C, instr);
   }
+
+  // N.B. Instruction sequences are defined by the spec to validate with a
+  // function type [t₁*] → [t₂*]. All valid instruction sequences have the
+  // function type [] → [t?], so this implementation only returns the optional
+  // value type t?.
+  validationErrorUnless(v.opds.length <= 1,
+      `The instruction sequence must be valid with type [] → [t?]`);
+
+  return v.opds.length === 1 ? v.opds[0] : undefined;
 }
 
-// http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
-//
-//     type val_type = I32 | I64 | F32 | F64
-//     type opd_stack = stack(val_type | Unknown)
-//     type ctrl_stack = stack(ctrl_frame)
-//
-class ValidationAlgorithm {
-  constructor() {
-    this.opds = [];
-    this.ctrls = [];
-  }
+function instrSequenceIsValidWithResultType(C, instrs, resulttype) {
+  assert(isInstance(C, Context));
+  assert(isArrayOfInstance(instrs, Instr));
+  assert(isInstance(resulttype, ResultType));
 
-  // func push_opd(type : val_type | Unknown) =
-  pushOpd(type) {
-    assert(isOperand(type));
-    // opds.push(type)
-    this.opds.push(type);
-  }
-
-  // func pop_opd() : val_type | Unknown =
-  popOpd() {
-    // if (opds.size() = ctrls[0].height && ctrls[0].unreachable)
-    //   return Unknown
-    if (this.opds.length === this.ctrls.top().height &&
-        this.ctrls.top().unreachable) {
-      return unknown;
-    }
-
-    // error_if(opds.size() = ctrls[0].height)
-    if (this.opds.length === this.ctrls.top().height) {
-      throw new Error('operand stack is empty');
-    }
-
-    // return opds.pop()
-    return this.opds.pop();
-  }
-
-  // func pop_opd(expect : val_type | Unknown) : val_type | Unknown =
-  popOpdExpect(expect) {
-    assert(isOperand(expect));
-
-    // let actual = pop_opd()
-    let actual = this.popOpd();
-
-    // if (actual = Unknown) return expect
-    if (actual === unknown) {
-      return expect;
-    }
-
-    // if (expect = Unknown) return actual
-    if (expect === unknown) {
-      return actual;
-    }
-
-    // error_if(actual =/= expect)
-    if (actual !== expect) {
-      throw new Error('actual != expect');
-    }
-
-    // return actual
-    return actual;
-  }
-
-  // func push_opds(types : list(val_type)) =
-  pushOpds(types) {
-    assert(isArrayOfInstance(types, ValType));
-
-    // foreach (t in types) push_opd(t)
-    for (let t of types) {
-      this.pushOpd(t);
-    }
-  }
-
-  // func pop_opds(types : list(val_type)) =
-  popOpds(types) {
-    assert(isArrayOfInstance(types, ValType));
-
-    // foreach (t in reverse(types)) pop_opd(t)
-    let reversed = types.slice();
-    reversed.reverse();
-
-    for (let t of reversed) {
-      this.popOpdExpect(t);
-    }
-  }
-
-  // func push_ctrl(label : list(val_type), out : list(val_type)) =
-  pushCtrl(opds, label, out) {
-    assert(isArrayOfInstance(label, ValType));
-    assert(isArrayOfInstance(out, ValType));
-
-    // let frame = ctrl_frame(label, out, opds.size(), false)
-    let frame = new CtrlFrame(label, out, this.opds.length, false);
-
-    // ctrls.push(frame)
-    this.ctrls.push(frame);
-  }
-
-  // func pop_ctrl() : list(val_type) =
-  popCtrl() {
-    // error_if(ctrls.is_empty())
-    if (this.ctrls.length === 0) {
-      throw new Error('control stack is empty');
-    }
-
-    // let frame = ctrls.pop()
-    let frame = this.ctrls.pop();
-
-    // pop_opds(frame.end_types)
-    this.opds.popOpds(frame.endTypes);
-
-    // error_if(opds.size() =/= frame.height)
-    if (this.opds.length !== frame.height) {
-      throw new Error('operand stack size != frame height');
-    }
-
-    // return frame.end_types
-    return frame.endTypes;
-  }
-
-  // func unreachable() =
-  unreachable(opds) {
-    // opds.resize(ctrls[0].height)
-    this.opds.length = this.ctrls[0].height;
-
-    // ctrls[0].unreachable := true
-    this.ctrls[0].unreachable = true;
-  }
+  let t = instrSequenceIsValid(C, instrs);
+  validationErrorUnless(t.equals(resulttype),
+      `The instruction sequence must be valid with result type ${resulttype} (got ${t})`);
+  return true;
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#expressions
-function exprIsValid(C, expr) {
+function exprIsValidWithResultType(C, expr, resulttype) {
   assert(isInstance(C, Context));
   assert(isInstance(expr, Expr));
-
-  let v = new ValidationAlgorithm();
+  assert(isInstance(resulttype, ResultType));
   //
   //     instr* end
   //
   // * The instruction sequence `instr*` must be valid with type [] → [t?],
   //   for some optional value type t?.
-  for (let instr of expr.instrs) {
-    instrIsValid(v, instr);
-  }
-
-  validationErrorUnless(v.opds.length <= 1,
-      `The instruction sequence must be valid with type [] → [t?]`);
+  let t = new ResultType(instrSequenceIsValid(C, expr.instrs));
 
   // * Then the expression is valid with result type [t?].
-  return new ResultType(v.opds[0]);
+  let rt = new ResultType(t);
+
+  validationErrorUnless(rt.equals(resulttype),
+      `The expression must be valid with result type ${resulttype} (got ${rt})`);
+  return true;
 }
 
-function instrIsValid(v, instr) {
+function exprIsConstant(C, expr) {
+  // TODO
+  validationErrorUnless(false, `TODO`);
+}
+
+function instrIsValid(C, instr) {
+  assert(isInstance(C, Context));
+  assert(isInstance(instr, Instr));
+
   if (instr instanceof ConstInstr) {
-    constInstrIsValid(v, instr);
+    return constInstrIsValid(C, instr);
   } else if (instr instanceof UnopInstr) {
-    unopInstrIsValid(v, instr);
+    return unopInstrIsValid(C, instr);
   } else if (instr instanceof BinopInstr) {
-    binopInstrIsValid(v, instr);
+    return binopInstrIsValid(C, instr);
   } else if (instr instanceof TestopInstr) {
-    testopInstrIsValid(v, instr);
+    return testopInstrIsValid(C, instr);
   } else if (instr instanceof RelopInstr) {
-    relopInstrIsValid(v, instr);
+    return relopInstrIsValid(C, instr);
   } else if (instr instanceof CvtopInstr) {
-    cvtopInstrIsValid(v, instr);
+    return cvtopInstrIsValid(C, instr);
   } else if (instr instanceof ParametricInstr) {
     switch (instr.kind) {
       case 'drop':
-        dropInstrIsValid(v, instr);
-        break;
+        return dropInstrIsValid(C, instr);
 
       case 'select':
-        selectInstrIsValid(v, instr);
-        break;
+        return selectInstrIsValid(C, instr);
     }
   } else if (instr instanceof VariableInstr) {
     switch (instr.kind) {
       case 'get_local':
-        getLocalInstrIsValid(C, v, instr);
-        break;
+        return getLocalInstrIsValid(C, instr);
+
       case 'set_local':
-        setLocalInstrIsValid(C, v, instr);
-        break;
+        return setLocalInstrIsValid(C, instr);
+
       case 'tee_local':
-        teeLocalInstrIsValid(C, v, instr);
-        break;
+        return teeLocalInstrIsValid(C, instr);
+
       case 'get_global':
-        getGlobalInstrIsValid(C, v, instr);
-        break;
+        return getGlobalInstrIsValid(C, instr);
+
       case 'set_global':
-        setGlobalInstrIsValid(C, v, instr);
-        break;
+        return setGlobalInstrIsValid(C, instr);
+    }
+  } else if (instr instanceof MemoryInstr) {
+    switch (instr.kind) {
+      case 'load':
+        return loadInstrIsValid(C, instr);
+
+      case 'store':
+        return storeInstrIsValid(C, instr);
+
+      case 'memory.size':
+        return memorySizeInstrIsValid(C, instr);
+
+      case 'memory.grow':
+        return memoryGrowInstrIsValid(C, instr);
+    }
+  } else if (instr instanceof ControlInstr) {
+    switch (instr.kind) {
+      case 'nop':
+        return nopInstrIsValid(C, instr);
+
+      case 'unreachable':
+        return unreachableInstrIsValid(C, instr);
+
+      case 'block':
+        return blockInstrIsValid(C, instr);
+
+      case 'loop':
+        return loopInstrIsValid(C, instr);
+
+      case 'if':
+        return ifInstrIsValid(C, instr);
+
+      case 'br':
+        return brInstrIsValid(C, instr);
+
+      case 'br_if':
+        return brIfInstrIsValid(C, instr);
+
+      case 'br_table':
+        return brTableInstrIsValid(C, instr);
+
+      case 'return':
+        return returnInstrIsValid(C, instr);
+
+      case 'call':
+        return callInstrIsValid(C, instr);
+
+      case 'call_indirect':
+        return callIndirectInstrIsValid(C, instr);
     }
   }
 
@@ -247,97 +167,97 @@ function instrIsValid(v, instr) {
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-const
-function constInstrIsValid(v, instr) {
+function constInstrIsValid(C, instr) {
   //
   //     t.const c
   //
   // * The instruction is valid with type [] → [t].
   let t = instr.valtype;
-  v.pushOpd(t);
+  C.pushOpd(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-unop
-function unopInstrIsValid(v, instr) {
+function unopInstrIsValid(C, instr) {
   //
   //     t.unop
   //
   // * The instruction is valid with type [t] → [t].
   let t = instr.valtype;
-  v.popOpdExpect(t);
-  v.pushOpd(t);
+  C.popOpdExpect(t);
+  C.pushOpd(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-binop
-function binopInstrIsValid(v, instr) {
+function binopInstrIsValid(C, instr) {
   //
   //     t.binop
   //
   // * The instruction is valid with type [t t] → [t].
   let t = instr.valtype;
-  v.popOpdExpect(t);
-  v.popOpdExpect(t);
-  v.pushOpd(t);
+  C.popOpdExpect(t);
+  C.popOpdExpect(t);
+  C.pushOpd(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-testop
-function testopInstrIsValid(v, instr) {
+function testopInstrIsValid(C, instr) {
   //
   //     t.testop
   //
   // * The instruction is valid with type [t] → [i32].
   //
   let t = instr.valtype;
-  v.popOpdExpect(t);
-  v.pushOpd(ValType.i32);
+  C.popOpdExpect(t);
+  C.pushOpd(ValType.i32);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-relop
-function relopInstrIsValid(v, instr) {
+function relopInstrIsValid(C, instr) {
   //
   //     t.relop
   //
   // * The instruction is valid with type [t t] → [i32].
   let t = instr.valtype;
-  v.popOpdExpect(t);
-  v.popOpdExpect(t);
-  v.pushOpd(ValType.i32);
+  C.popOpdExpect(t);
+  C.popOpdExpect(t);
+  C.pushOpd(ValType.i32);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-cvtop
-function cvtopInstrIsValid(v, instr) {
+function cvtopInstrIsValid(C, instr) {
   //
   //     t₂.cvtop/t₁
   //
   // * The instruction is valid with type [t₁] → [t₂].
   let t_1 = instr.valtypeSrc;
   let t_2 = instr.valtypeDst;
-  v.popOpdExpect(t_1);
-  v.pushOpd(t_2);
+  C.popOpdExpect(t_1);
+  C.pushOpd(t_2);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-drop
-function dropInstrIsValid(v, instr) {
+function dropInstrIsValid(C, instr) {
   //
   //     drop
   //
   // * The instruction is valid with type [t] → [], for any value type t.
-  v.popOpd();
+  C.popOpd();
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-select
-function selectInstrIsValid(v, instr) {
+function selectInstrIsValid(C, instr) {
   //
   //     select
   //
   // * The instruction is valid with type [t t i32] → [t], for any value type t.
-  v.popOpdExpect(ValType.i32);
-  let t_1 = v.popOpd();
-  let t_2 = v.popOpdExpect(t_1);
-  v.pushOpd(t_2);
+  C.popOpdExpect(ValType.i32);
+  let t_1 = C.popOpd();
+  let t_2 = C.popOpdExpect(t_1);
+  C.pushOpd(t_2);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-get-local
-function getLocalInstrIsValid(C, v, instr) {
+function getLocalInstrIsValid(C, instr) {
   //
   //     get_local x
   //
@@ -349,11 +269,11 @@ function getLocalInstrIsValid(C, v, instr) {
   let t = C.getLocal(x);
 
   // * Then the instruction is valid with type [] → [t].
-  v.pushOpd(t);
+  C.pushOpd(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-set-local
-function setLocalInstrIsValid(C, v, instr) {
+function setLocalInstrIsValid(C, instr) {
   //
   //     set_local x
   //
@@ -365,11 +285,11 @@ function setLocalInstrIsValid(C, v, instr) {
   let t = C.getLocal(x);
 
   // * Then the instruction is valid with type [t] → [].
-  v.popOpdExpect(t);
+  C.popOpdExpect(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-tee-local
-function teeLocalInstrIsValid(C, v, instr) {
+function teeLocalInstrIsValid(C, instr) {
   //
   //     set_local x
   //
@@ -381,13 +301,13 @@ function teeLocalInstrIsValid(C, v, instr) {
   let t = C.getLocal(x);
 
   // * Then the instruction is valid with type [t] → [t].
-  v.popOpdExpect(t);
-  v.pushOpd(t);
+  C.popOpdExpect(t);
+  C.pushOpd(t);
 }
 
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-get-global
-function getGlobalInstrIsValid(C, v, instr) {
+function getGlobalInstrIsValid(C, instr) {
   //
   //     get_global x
   //
@@ -399,11 +319,11 @@ function getGlobalInstrIsValid(C, v, instr) {
   let {mut, valtype: t} = C.getGlobal(x);
 
   // * Then the instruction is valid with type [] → [t].
-  v.pushOpd(t);
+  C.pushOpd(t);
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#valid-set-global
-function setGlobalInstrIsValid(C, v, instr) {
+function setGlobalInstrIsValid(C, instr) {
   //
   //     set_global x
   //
@@ -418,17 +338,307 @@ function setGlobalInstrIsValid(C, v, instr) {
   validationErrorUnless(mut === Mut.var, `The mutability ${mut} must be var.`);
 
   // * Then the instruction is valid with type [t] → [].
-  v.popOpdExpect(t);
+  C.popOpdExpect(t);
 }
 
-function exprIsValidWithResultType(C, expr, resulttype) {
-  let v = exprIsValid(C, expr);
-  validationErrorUnless(v.equals(resulttype),
-      `The expression must be valid with result type ${resulttype} (got ${v.resulttype})`);
-  return true;
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-load
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-loadn
+function loadInstrIsValid(C, instr) {
+  //
+  //     t.load memarg
+  //     t.loadN_sx memarg
+  //
+  let {valtype, storageSize, memarg} = instr;
+
+  // * The memory `C.mems[0]` must be defined in the context.
+  validationErrorUnless(C.isMem(x),
+      `The memory C.mems[${x}] must be defined in the context.`);
+
+  // * The alignment `2^memarg.align` must not be larger than the bit width of
+  //   `t` divided by 8.
+  // * The alignment `2^memarg.align` must not be larger than N / 8.
+  validationErrorUnless(1 << memarg.align <= storageSize,
+      `The alignment ${1 << memarg.align} must not be larger than ${storageSize}.`);
+
+  // * Then the instruction is valid with type [i32] → [t].
+  C.popOpdExpect(ValType.i32);
+  C.pushOpd(valtype);
 }
 
-function exprIsConstant(C, expr) {
-  // TODO
-  validationErrorUnless(false, `TODO`);
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-store
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-storen
+function storeInstrIsValid(C, instr) {
+  //
+  //     t.store memarg
+  //     t.storeN memarg
+  //
+  let {valtype, storageSize, memarg} = instr;
+
+  // * The memory `C.mems[0]` must be defined in the context.
+  validationErrorUnless(C.isMem(x),
+      `The memory C.mems[${x}] must be defined in the context.`);
+
+  // * The alignment `2^memarg.align` must not be larger than the bit width of
+  //   `t` divided by 8.
+  // * The alignment `2^memarg.align` must not be larger than N / 8.
+  validationErrorUnless(1 << memarg.align <= storageSize,
+      `The alignment ${1 << memarg.align} must not be larger than ${storageSize}.`);
+
+  // * Then the instruction is valid with type [i32 t] → [].
+  C.popOpdExpect(valtype);
+  C.popOpdExpect(ValType.i32);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-memory-size
+function memorySizeInstrIsValid(C, instr) {
+  //
+  //     memory.size
+  //
+  // * The memory `C.mems[0]` must be defined in the context.
+  validationErrorUnless(C.isMem(x),
+      `The memory C.mems[${x}] must be defined in the context.`);
+
+  // * Then the instruction is valid with type [] → [i32].
+  C.pushOpd(ValType.i32);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-memory-grow
+function memoryGrowInstrIsValid(C, instr) {
+  //
+  //     memory.grow
+  //
+  // * The memory `C.mems[0]` must be defined in the context.
+  validationErrorUnless(C.isMem(x),
+      `The memory C.mems[${x}] must be defined in the context.`);
+
+  // * Then the instruction is valid with type [i32] → [i32].
+  C.popOpdExpect(ValType.i32);
+  C.pushOpd(ValType.i32);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-nop
+function nopInstrIsValid(C, instr) {
+  //
+  //     nop
+  //
+  // * The instruction is valid with type [] → [].
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-unreachable
+function unreachableInstrIsValid(C, instr) {
+  //
+  //     unreachable
+  //
+  // * The instruction is valid with type [t₁*] → [t₂*], for any sequence of
+  //   value types t₁* and t₂*.
+  C.unreachable();
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-block
+function blockInstrIsValid(C, instr) {
+  //
+  //     block [t?] instr* end
+  //
+  let {resulttype: t, instrs} = instr;
+
+  // * Let C' be the same context as C, but with the result type [t?] prepended
+  //   to the labels vector.
+  C.pushCtrl(t, t);
+
+  // * Under context C', the instruction sequence instr* must be valid with
+  //   type [] → [t?].
+  instrSequenceIsValidWithResultType(C, instrs, t);
+
+  C.popCtrl();
+
+  // * Then the compound instruction is valid with type [] → [t?].
+  C.pushOpds(t);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-loop
+function loopInstrIsValid(C, instr) {
+  //
+  //     loop [t?] instr* end
+  //
+  let {resulttype: t, instrs} = instr;
+
+  // * Let C' be the same context as C, but with the empty result type []
+  //   prepended to the labels vector.
+  C.pushCtrl([], t);
+
+  // * Under context C', the instruction sequence instr* must be valid with
+  //   type [] → [t?].
+  instrSequenceIsValidWithResultType(C, instrs, t);
+
+  C.popCtrl();
+
+  // * Then the compound instruction is valid with type [] → [t?].
+  C.pushOpds(t);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-if
+function ifInstrIsValid(C, instr) {
+  //
+  //     if [t?] instr₁* else instr₂* end
+  //
+  let {resulttype: t, instrs: instrs_1, elseInstrs: instrs_2} = instr;
+
+  C.popOpdExpect(ValType.i32);
+
+  // * Let C' be the same context as C, but with the result type [t?]
+  //   prepended to the labels vector.
+  C.pushCtrl(t, t);
+
+  // * Under context C', the instruction sequence instr₁* must be valid with
+  //   type [] → [t?].
+  instrSequenceIsValidWithResultType(C, instrs_1, t);
+
+  C.popCtrl();
+  C.pushCtrl(t, t);
+
+  // * Under context C', the instruction sequence instr₂* must be valid with
+  //   type [] → [t?].
+  instrSequenceIsValidWithResultType(C, instrs_2, t);
+
+  C.popCtrl();
+
+  // * Then the compound instruction is valid with type [i32] → [t?].
+  C.pushOpds(t);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-br
+function brInstrIsValid(C, instr) {
+  //
+  //     br l
+  //
+  let {labelidx: l} = instr;
+
+  // * The label `C.labels[l]` must be defined in the context.
+  validationErrorUnless(C.isLabel(l),
+      `The label C.labels[${l}] must be defined in the context.`);
+
+  // * Let [t?] be the result type `C.labels[l]`.
+  let t = C.getLabel(l);
+
+  // * Then the instruction is valid with type [t₁* t?] -> [t₂*], for any
+  //   sequence of value types t₁* and t₂*.
+  C.popOpds(t);
+  C.unreachable();
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-br-if
+function brIfInstrIsValid(C, instr) {
+  //
+  //     br_if l
+  //
+  let {labelidx: l} = instr;
+
+  // * The label `C.labels[l]` must be defined in the context.
+  validationErrorUnless(C.isLabel(l),
+      `The label C.labels[${l}] must be defined in the context.`);
+
+  // * Let [t?] be the result type `C.labels[l]`.
+  let t = C.getLabel(l);
+
+  // * Then the instruction is valid with type [t? i32] -> [t?].
+  C.popOpdExpect(ValType.i32);
+  C.popOpds(t);
+  C.pushOpds(t);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-br-table
+function brTableInstrIsValid(C, instr) {
+  //
+  //     br_table l* lₙ
+  //
+  let {labelidxs: l_star, labelidx: l_n} = instr;
+
+  // * The label `C.labels[lₙ]` must be defined in the context.
+  validationErrorUnless(C.isLabel(l_n),
+      `The label C.labels[${l_n}] must be defined in the context.`);
+
+  // * Let [t?] be the result type `C.labels[lₙ]`.
+  let t = C.getLabel(l_n);
+
+  for (let l_i of l_star) {
+    // * For all lᵢ in l*, the label `C.labels[lᵢ]` must be defined in the
+    //   context.
+    validationErrorUnless(C.isLabel(l_i),
+        `The label C.labels[${l_i}] must be defined in the context.`);
+
+    // * For all lᵢ in l*, `C.labels[lᵢ]` must be t?.
+    // TODO
+  }
+
+  // * Then the instruction is valid with type [t₁* t? i32] -> [t₂*], for any
+  //   sequence of value types t₁* and t₂*.
+  C.popOpdExpect(ValType.i32);
+  C.popOpds(t);
+  C.unreachable();
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-return
+function returnInstrIsValid(C, instr) {
+  //
+  //     return
+  //
+  // * The return type `C.return` must not be absent in the context.
+  validationErrorUnless(C.return !== undefined,
+      `The return type C.return must not be absent in the context.`);
+
+  // * Let [t?] be the result type of `C.return`.
+  let t = C.return;
+
+  // * Then the instruction is valid with type [t₁* t?] -> [t₂*], for any
+  //   sequence of value types t₁* and t₂*.
+  C.popOpds(t);
+  C.unreachable();
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-call
+function callInstrIsValid(C, instr) {
+  //
+  //     call x
+  //
+  let {idx: x} = instr;
+
+  // * The function `C.funcs[x]` must be defined in the context.
+  validationErrorUnless(C.isFunc(x),
+      `The function C.func[${x}] must be defined in the context.`);
+
+  // * Then the instruction is valid with type `C.funcs[x]`.
+  let ft = C.getFunc(x);
+  C.popOpds(ft.results);
+  C.pushOpds(ft.params);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#valid-call-indirect
+function callIndirectInstrIsValid(C, instr) {
+  //
+  //     call_indirect x
+  //
+  let {idx: x} = instr;
+
+  // * The table `C.tables[0]` must be defined in the context.
+  validationErrorUnless(C.isTable(0),
+      `The table C.table[${0}] must be defined in the context.`);
+
+  // * Let `limits elemtype` be the table type `C.tables[0]`.
+  let {limits, elemtype} = C.getTable(0);
+
+  // * The element type `elemtype` must be `anyfunc`.
+  validationErrorUnless(elemtype === ElemType.anyfunc,
+      `The element type (${elemtype}) must be anyfunc.`);
+
+  // * The type `C.types[x]` must be defined in the context.
+  validationErrorUnless(C.isType(x),
+      `The type C.type[${x}] must be defined in the context.`);
+
+  // * Let [t₁*] -> [t₂*] be the function type `C.types[x]`.
+  let {params: t_1, results: t_2} = C.getType(x);
+
+  // * Then the instruction is valid with type [t₁* i32] -> [t₂*].
+  C.popOpdExpect(ValType.i32);
+  C.popOpds(t_1);
+  C.pushOpds(t_2);
 }

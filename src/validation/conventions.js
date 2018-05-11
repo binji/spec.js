@@ -16,6 +16,12 @@
 
 class ValidationError extends Error {}
 
+function validationErrorIf(test, message) {
+  if (test) {
+    throw new ValidationError(message);
+  }
+}
+
 function validationErrorUnless(test, message) {
   if (!test) {
     throw new ValidationError(message);
@@ -50,8 +56,9 @@ class Context {
     this.mems = mems;
     this.globals = globals;
     this.locals = locals;
-    this.labels = labels;
-    this.return = return_;
+
+    this.v = new ValidationAlgorithm();
+    this.v.pushCtrl(labels, return_);
   }
 
   isType(idx) {
@@ -92,5 +99,45 @@ class Context {
   getMem(idx) {
     assert(this.isMem(idx));
     return this.mems[idx];
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  pushOpd(type) {
+    return this.v.pushOpd(type);
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  popOpd() {
+    return this.v.popOpd();
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  popOpdExpect(expect) {
+    return this.v.popOpdExpect(expect);
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  pushOpds(types) {
+    return this.v.pushOpds(types);
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  popOpds(types) {
+    return this.v.popOpds(types);
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  pushCtrl(label, out) {
+    return this.v.pushCtrl(label, out);
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  popCtrl() {
+    return this.v.popCtrl();
+  }
+
+  // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
+  unreachable() {
+    return this.v.unreachable();
   }
 }
