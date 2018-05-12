@@ -50,7 +50,7 @@ function funcIsValid(C, func) {
   });
 
   // * Under the Context C', the expression expr must be valid with type `t₂?`.
-  exprIsValidWithResultType(C_prime, v, expr, resulttype);
+  exprIsValidWithResultType(C_prime, expr, resulttype);
 
   // * Then the function definition is valid with type `[t₁*] → [t₂?]`.
   return functype;
@@ -100,8 +100,7 @@ function globalIsValid(C, global) {
   globalTypeIsValid(globaltype);
 
   // * The expression `expr` must be valid with result type [t].
-  let resulttype = new ResultType(t);
-  exprIsValidWithResultType(C, expr, resulttype);
+  exprIsValidWithResultType(C, expr, new ResultType(t));
 
   // * The expression `expr` must be constant.
   exprIsConstant(C, expr);

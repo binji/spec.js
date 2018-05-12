@@ -8,6 +8,10 @@ function isEnumValue(o, values) {
   return isString(o) && values.includes(o.toString());
 }
 
+function isBool(o) {
+  return typeof o === 'boolean';
+}
+
 function isU32(o) {
   return typeof o === 'number' || o instanceof Number;
 }

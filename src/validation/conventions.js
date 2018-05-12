@@ -56,9 +56,9 @@ class Context {
     this.mems = mems;
     this.globals = globals;
     this.locals = locals;
-
+    this.labels = labels;
+    this.return = return_;
     this.v = new ValidationAlgorithm();
-    this.v.pushCtrl(labels, return_);
   }
 
   isType(idx) {
@@ -99,6 +99,16 @@ class Context {
   getMem(idx) {
     assert(this.isMem(idx));
     return this.mems[idx];
+  }
+
+  isGlobal(idx) {
+    assert(isIndex(idx));
+    return idx < this.globals.length;
+  }
+
+  getGlobal(idx) {
+    assert(this.isGlobal(idx));
+    return this.globals[idx];
   }
 
   // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures

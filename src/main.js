@@ -24,7 +24,7 @@ load('validation/instructions.js');
 load('validation/modules.js');
 load('appendix/algorithm.js');
 
-let t0 = new FuncType([], []);
+let t0 = new FuncType([], [ValType.i32]);
 let f0 = new Func({type: 0, locals: [], body: new Expr([
   instrs.get('i32.const')(1),
   instrs.get('i32.const')(2),

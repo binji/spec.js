@@ -148,14 +148,19 @@ class ValidationAlgorithm {
     validationErrorIf(this.ctrls.length === 0, 'control stack is empty');
 
     // let frame = ctrls.pop()
-    let frame = this.ctrls.shift();
+    // N.B. this is a bug in the documented algorithm; the frame cannot be
+    // popped here as the top of the `ctrls` stack is accessed in `pop_opd`.
+    let frame = this.ctrls[0];
 
     // pop_opds(frame.end_types)
-    this.opds.popOpds(frame.endTypes);
+    this.popOpds(frame.endTypes);
 
     // error_if(opds.size() =/= frame.height)
     validationErrorIf(this.opds.length !== frame.height,
         'operand stack size ≠ frame height');
+
+    // N.B. frame should be popped here.
+    this.ctrls.shift();
 
     // return frame.end_types
     return frame.endTypes;

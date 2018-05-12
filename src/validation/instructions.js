@@ -16,33 +16,19 @@
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#instruction-sequences
 // http://webassembly.github.io/spec/core/appendix/algorithm.html#validation-algorithm
-function instrSequenceIsValid(C, instrs) {
+function instrSequenceIsValidWithResultType(C, instrs, label, resulttype) {
   assert(isInstance(C, Context));
   assert(isArrayOfInstance(instrs, Instr));
+  assert(isInstance(label, ResultType));
+  assert(isInstance(resulttype, ResultType));
+
+  C.pushCtrl(label.toArray(), resulttype.toArray());
 
   for (let instr of instrs) {
     instrIsValid(C, instr);
   }
 
-  // N.B. Instruction sequences are defined by the spec to validate with a
-  // function type [t₁*] → [t₂*]. All valid instruction sequences have the
-  // function type [] → [t?], so this implementation only returns the optional
-  // value type t?.
-  validationErrorUnless(v.opds.length <= 1,
-      `The instruction sequence must be valid with type [] → [t?]`);
-
-  return v.opds.length === 1 ? v.opds[0] : undefined;
-}
-
-function instrSequenceIsValidWithResultType(C, instrs, resulttype) {
-  assert(isInstance(C, Context));
-  assert(isArrayOfInstance(instrs, Instr));
-  assert(isInstance(resulttype, ResultType));
-
-  let t = instrSequenceIsValid(C, instrs);
-  validationErrorUnless(t.equals(resulttype),
-      `The instruction sequence must be valid with result type ${resulttype} (got ${t})`);
-  return true;
+  C.popCtrl();
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#expressions
@@ -55,14 +41,24 @@ function exprIsValidWithResultType(C, expr, resulttype) {
   //
   // * The instruction sequence `instr*` must be valid with type [] → [t?],
   //   for some optional value type t?.
-  let t = new ResultType(instrSequenceIsValid(C, expr.instrs));
 
-  // * Then the expression is valid with result type [t?].
-  let rt = new ResultType(t);
+  // N.B. C.labels is empty when validating a non-function expression (e.g. a
+  // data segment initializer). Otherwise it always has one ResultType, which
+  // may itself be empty.
+  //
+  // It is convenient for `instrSequenceIsValidWithResultType` to take its
+  // `label` parameter as a ResultType, so we'll convert an empty `labels` list
+  // to a `ResultType`.
+  assert(C.labels.length <= 1);
 
-  validationErrorUnless(rt.equals(resulttype),
-      `The expression must be valid with result type ${resulttype} (got ${rt})`);
-  return true;
+  let label;
+  if (C.labels.length === 0) {
+    label = new ResultType();
+  } else {
+    label = C.labels[0];
+  }
+
+  instrSequenceIsValidWithResultType(C, expr.instrs, label, resulttype);
 }
 
 function exprIsConstant(C, expr) {
@@ -443,13 +439,9 @@ function blockInstrIsValid(C, instr) {
 
   // * Let C' be the same context as C, but with the result type [t?] prepended
   //   to the labels vector.
-  C.pushCtrl(t, t);
-
   // * Under context C', the instruction sequence instr* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs, t);
-
-  C.popCtrl();
+  instrSequenceIsValidWithResultType(C, instrs, t, t);
 
   // * Then the compound instruction is valid with type [] → [t?].
   C.pushOpds(t);
@@ -464,13 +456,9 @@ function loopInstrIsValid(C, instr) {
 
   // * Let C' be the same context as C, but with the empty result type []
   //   prepended to the labels vector.
-  C.pushCtrl([], t);
-
   // * Under context C', the instruction sequence instr* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs, t);
-
-  C.popCtrl();
+  instrSequenceIsValidWithResultType(C, instrs, new ResultType(), t);
 
   // * Then the compound instruction is valid with type [] → [t?].
   C.pushOpds(t);
@@ -487,20 +475,13 @@ function ifInstrIsValid(C, instr) {
 
   // * Let C' be the same context as C, but with the result type [t?]
   //   prepended to the labels vector.
-  C.pushCtrl(t, t);
-
   // * Under context C', the instruction sequence instr₁* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs_1, t);
-
-  C.popCtrl();
-  C.pushCtrl(t, t);
+  instrSequenceIsValidWithResultType(C, instrs_1, t, t);
 
   // * Under context C', the instruction sequence instr₂* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs_2, t);
-
-  C.popCtrl();
+  instrSequenceIsValidWithResultType(C, instrs_2, t, t);
 
   // * Then the compound instruction is valid with type [i32] → [t?].
   C.pushOpds(t);
