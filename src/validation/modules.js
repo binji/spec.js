@@ -50,7 +50,7 @@ function funcIsValid(C, func) {
   });
 
   // * Under the Context C', the expression expr must be valid with type `t₂?`.
-  exprIsValidWithResultType(C_prime, expr, resulttype);
+  exprIsValid(C_prime, expr, resulttype);
 
   // * Then the function definition is valid with type `[t₁*] → [t₂?]`.
   return functype;
@@ -100,7 +100,7 @@ function globalIsValid(C, global) {
   globalTypeIsValid(globaltype);
 
   // * The expression `expr` must be valid with result type [t].
-  exprIsValidWithResultType(C, expr, new ResultType(t));
+  exprIsValid(C, expr, new ResultType(t));
 
   // * The expression `expr` must be constant.
   exprIsConstant(C, expr);
@@ -126,11 +126,11 @@ function elemIsValid(C, elem) {
   let {limits, elemtype} = C.getTable(x);
 
   // * The element type `elemtype` must be `anyfunc`.
-  validationErrorUnless(elemtype != ElemType.anyfunc,
+  validationErrorUnless(elemtype === ElemType.anyfunc,
       `The element type ${elemtype} must be anyfunc`);
 
   // * The expression `expr` must be valid with result type `[i32]`.
-  exprIsValidWithResultType(C, expr, new ResultType(ValType.i32));
+  exprIsValid(C, expr, new ResultType(ValType.i32));
 
   // * The expression `expr` must be constant.
   exprIsConstant(C, expr);
@@ -160,7 +160,7 @@ function dataIsValid(C, data) {
       `The memory C.mem[${x}] must be defined in the context.`);
 
   // * The expression `expr` must be valid with result type `[i32]`.
-  exprIsValidWithResultType(C, expr, new ResultType(ValType.i32));
+  exprIsValid(C, expr, new ResultType(ValType.i32));
 
   // * The expression `epxr` must be constant.
   exprIsConstant(C, expr);
@@ -486,7 +486,7 @@ function moduleIsValid(module) {
 
   // * For each `exportᵢ` in `module.exports`, the segment `exportᵢ` must be
   //   valid with an external type `etᵢ`.
-  let et_star = module.imports.map(export_i => exportIsValid(C, export_i));
+  let et_star = module.exports.map(export_i => exportIsValid(C, export_i));
 
   // * The length of `C.tables` must not be larger than 1.
   validationErrorUnless(C.tables.length <= 1,

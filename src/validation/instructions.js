@@ -16,7 +16,7 @@
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#instruction-sequences
 // http://webassembly.github.io/spec/core/appendix/algorithm.html#validation-algorithm
-function instrSequenceIsValidWithResultType(C, instrs, label, resulttype) {
+function instrSequenceIsValid(C, instrs, label, resulttype) {
   assert(isInstance(C, Context));
   assert(isArrayOfInstance(instrs, Instr));
   assert(isInstance(label, ResultType));
@@ -32,7 +32,7 @@ function instrSequenceIsValidWithResultType(C, instrs, label, resulttype) {
 }
 
 // http://webassembly.github.io/spec/core/valid/instructions.html#expressions
-function exprIsValidWithResultType(C, expr, resulttype) {
+function exprIsValid(C, expr, resulttype) {
   assert(isInstance(C, Context));
   assert(isInstance(expr, Expr));
   assert(isInstance(resulttype, ResultType));
@@ -46,9 +46,9 @@ function exprIsValidWithResultType(C, expr, resulttype) {
   // data segment initializer). Otherwise it always has one ResultType, which
   // may itself be empty.
   //
-  // It is convenient for `instrSequenceIsValidWithResultType` to take its
-  // `label` parameter as a ResultType, so we'll convert an empty `labels` list
-  // to a `ResultType`.
+  // It is convenient for `instrSequenceIsValid` to take its `label` parameter
+  // as a ResultType, so we'll convert an empty `labels` list to a
+  // `ResultType`.
   assert(C.labels.length <= 1);
 
   let label;
@@ -58,12 +58,7 @@ function exprIsValidWithResultType(C, expr, resulttype) {
     label = C.labels[0];
   }
 
-  instrSequenceIsValidWithResultType(C, expr.instrs, label, resulttype);
-}
-
-function exprIsConstant(C, expr) {
-  // TODO
-  validationErrorUnless(false, `TODO`);
+  instrSequenceIsValid(C, expr.instrs, label, resulttype);
 }
 
 function instrIsValid(C, instr) {
@@ -451,7 +446,7 @@ function blockInstrIsValid(C, instr) {
   //   to the labels vector.
   // * Under context C', the instruction sequence instr* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs, t, t);
+  instrSequenceIsValid(C, instrs, t, t);
 
   // * Then the compound instruction is valid with type [] → [t?].
   C.pushOpds(t);
@@ -468,7 +463,7 @@ function loopInstrIsValid(C, instr) {
   //   prepended to the labels vector.
   // * Under context C', the instruction sequence instr* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs, new ResultType(), t);
+  instrSequenceIsValid(C, instrs, new ResultType(), t);
 
   // * Then the compound instruction is valid with type [] → [t?].
   C.pushOpds(t);
@@ -487,11 +482,11 @@ function ifInstrIsValid(C, instr) {
   //   prepended to the labels vector.
   // * Under context C', the instruction sequence instr₁* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs_1, t, t);
+  instrSequenceIsValid(C, instrs_1, t, t);
 
   // * Under context C', the instruction sequence instr₂* must be valid with
   //   type [] → [t?].
-  instrSequenceIsValidWithResultType(C, instrs_2, t, t);
+  instrSequenceIsValid(C, instrs_2, t, t);
 
   // * Then the compound instruction is valid with type [i32] → [t?].
   C.pushOpds(t);
@@ -632,4 +627,44 @@ function callIndirectInstrIsValid(C, instr) {
   C.popOpdExpect(ValType.i32);
   C.popOpds(t_1);
   C.pushOpds(t_2);
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
+function exprIsConstant(C, expr) {
+  assert(isInstance(C, Context));
+  assert(isInstance(expr, Expr));
+
+  // * In a constant expression `instr* end` all instructions in `instr*` must
+  //   be constant.
+  for (let instr of expr.instrs) {
+    instrIsConstant(C, instr);
+  }
+}
+
+// http://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions
+function instrIsConstant(C, instr) {
+  assert(isInstance(C, Context));
+  assert(isInstance(instr, Instr));
+
+  // * A constant instruction must be:
+  if (instr instanceof ConstInstr) {
+    // * either of the form `t.const c`
+    return true;
+  } else if (instr instanceof VariableInstr && instr.kind === 'get_global') {
+    // * or of the form `get_global x`, in which case `C.globals[x]` must be a
+    //   global type of the form `const t`.
+    let {idx: x} = instr;
+
+    validationErrorUnless(C.isGlobal(x),
+        `The global C.globals[${x}] must be defined in the context.`);
+
+    let {mut, valtype: t} = C.getGlobal(x);
+
+    validationErrorUnless(mut === Mut.const,
+        `C.globals[${x}] must be a global type of the form 'const t'.`);
+
+    return true;
+  } else {
+    throw new ValidationError(`A constant instruction must be of the form 't.const c' or 'get_global x'.`);
+  }
 }

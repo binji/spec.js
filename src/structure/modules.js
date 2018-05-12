@@ -92,7 +92,7 @@ class Mem {
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#globals
 //
-//     global ::= { type memtype, init expr }
+//     global ::= { type globaltype, init expr }
 //
 class Global {
   constructor({type, init}) {
@@ -112,7 +112,7 @@ class Elem {
     assert(isIndex(table));
     assert(isInstance(offset, Expr));
     assert(isArrayWithEvery(init, isIndex));
-    this.type = type;
+    this.table = table;
     this.offset = offset;
     this.init = init;
   }
@@ -212,7 +212,7 @@ function globalsFromExports(exports) {
 //     import ::= { module name, name name, desc importdesc }
 //
 class Import {
-  constructor(module, name, desc) {
+  constructor({module, name, desc}) {
     assert(isString(module));
     assert(isString(name));
     assert(isInstance(desc, ImportDesc));
@@ -230,22 +230,25 @@ class Import {
 class ImportDesc {
   constructor(kind, value) {
     assert(isEnumValue(kind, ExternType.kinds));
-    assert(isIndex(idx));
     this.kind = kind;
     switch (kind) {
       case 'func':
+        assert(isIndex(value));
         this.typeidx = value;
         break;
 
       case 'table':
+        assert(isInstance(value, TableType));
         this.tabletype = value;
         break;
 
       case 'mem':
+        assert(isInstance(value, MemType));
         this.memtype = value;
         break;
 
       case 'global':
+        assert(isInstance(value, GlobalType));
         this.globaltype = value;
         break;
     }

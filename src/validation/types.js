@@ -24,7 +24,7 @@
 //
 function limitsIsValid(limits) {
   assert(isInstance(limits, Limits));
-  if (isUndefined(limits.max)) {
+  if (!isUndefined(limits.max)) {
     validationErrorUnless(limits.min <= limits.max,
         `limits min (${limits.min}) must not be smaller than its max (${limits.max})`);
   }
@@ -64,7 +64,7 @@ function tableTypeIsValid(tabletype) {
 // * The limits `limits` must be valid.
 // * Then the memory type is valid.
 //
-function memoryTypeIsValid(memtype) {
+function memTypeIsValid(memtype) {
   assert(isInstance(memtype, MemType));
   return limitsIsValid(memtype.limits);
 }
