@@ -63,7 +63,7 @@ class ConstInstr extends NumericInstr {
   }
 
   toString() {
-    return `${this.valtype}.const`;
+    return `${this.valtype}.const ${this.value}`;
   }
 }
 
@@ -384,7 +384,7 @@ class VariableInstr extends Instr {
   }
 
   toString() {
-    return this.kind;
+    return `${this.kind} ${this.idx}`;
   }
 }
 
@@ -415,6 +415,10 @@ class MemArg {
     this.offset = offset;
     this.align = align;
   }
+
+  toString() {
+    return `{offset ${this.offset}, align ${this.align}}`;
+  }
 }
 
 // https://webassembly.github.io/spec/core/syntax/instructions.html#memory-instructions
@@ -440,7 +444,7 @@ class LoadStoreInstr extends MemoryInstr {
   }
 
   toString() {
-    return `${this.valtype}.${this.kind}`;
+    return `${this.valtype}.${this.kind} ${this.memarg}`;
   }
 }
 
@@ -536,6 +540,10 @@ class BlockInstr extends ControlInstr {
     this.resulttype = resulttype;
     this.instrs = instrs;
   }
+
+  toString() {
+    return `${this.kind} ${this.resulttype} ${this.instrs.join(' ')} end`;
+  }
 }
 
 BlockInstr.kinds = ['block', 'loop', 'if'];
@@ -548,6 +556,10 @@ class IfInstr extends BlockInstr {
     assert(isArrayOfInstance(instrs2, Instr));
     super(kind, resulttype, instrs1);
     this.elseInstrs = instrs2;
+  }
+
+  toString() {
+    return `${this.kind} ${this.resulttype} ${this.instrs.join(' ')} else ${this.elseInstrs.join(' ')} end`;
   }
 }
 
@@ -565,6 +577,10 @@ class BranchInstr extends ControlInstr {
     super();
     this.kind = kind;
     this.labelidx = labelidx;
+  }
+
+  toString() {
+    return `${this.kind} ${this.labelidx}`;
   }
 }
 
@@ -584,6 +600,10 @@ class BrTableInstr extends BranchInstr {
     super('br_table', labelidx);
     this.labelidxs = labelidxs;
   }
+
+  toString() {
+    return `${this.kind} [${this.labelidxs.join(' ')}] ${this.labelidx}`;
+  }
 }
 
 instrs.set('br_table', (labelidxs, labelidx) => new BrTableInstr(labelidxs, labelidx));
@@ -593,6 +613,10 @@ class CallInstr extends ControlInstr {
     assert(isEnumValue(kind, CallInstr.kinds));
     super();
     this.idx = idx;
+  }
+
+  toString() {
+    return `${this.kind} ${this.idx}`;
   }
 }
 
@@ -613,5 +637,9 @@ class Expr {
   constructor(instrs) {
     assert(isArrayOfInstance(instrs, Instr));
     this.instrs = instrs;
+  }
+
+  toString() {
+    return `${this.instrs.join(' ')} end`;
   }
 }

@@ -91,8 +91,10 @@ let M0 = new Module({
   globals: [g0],
   elem: [e0],
   data: [d0],
+  start: new Start({func: 1}),
   imports: [im0],
   exports: [ex0]
 });
 
+print(M0);
 print(moduleIsValid(M0));

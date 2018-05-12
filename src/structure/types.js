@@ -57,6 +57,10 @@ class ResultType {
   toArray() {
     return isUndefined(this.valtype) ? [] : [this.valtype];
   }
+
+  toString() {
+    return `[${this.valtype}]`;
+  }
 }
 
 // https://webassembly.github.io/spec/core/syntax/types.html#function-types
@@ -69,6 +73,10 @@ class FuncType {
     assert(isArrayOfInstance(results, ValType));
     this.params = params;
     this.results = results;
+  }
+
+  toString() {
+    return `[${this.params.join(', ')}] → [${this.results.join(', ')}]`;
   }
 }
 
@@ -83,6 +91,14 @@ class Limits {
     this.min = min;
     this.max = max;
   }
+
+  toString() {
+    if (isUndefined(this.max)) {
+      return `{min ${this.min}}`;
+    } else {
+      return `{min ${this.min}, max ${this.max}}`;
+    }
+  }
 }
 
 // https://webassembly.github.io/spec/core/syntax/types.html#memory-types
@@ -93,6 +109,10 @@ class MemType {
   constructor(limits) {
     assert(isInstance(limits, Limits));
     this.limits = limits;
+  }
+
+  toString() {
+    return this.limits.toString();
   }
 }
 
@@ -106,6 +126,10 @@ class TableType {
     assert(isInstance(elemtype, ElemType));
     this.limits = limits;
     this.elemtype = elemtype;
+  }
+
+  toString() {
+    return `${this.limits} ${this.elemtype}`;
   }
 }
 
@@ -137,6 +161,10 @@ class GlobalType {
     assert(isInstance(valtype, ValType));
     this.mut = mut;
     this.valtype = valtype;
+  }
+
+  toString() {
+    return `${this.mut} ${this.valtype}`;
   }
 }
 
@@ -186,6 +214,10 @@ class ExternType {
     }
     this.kind = kind;
     this.type = type;
+  }
+
+  toString() {
+    return `${this.kind} ${this.type}`;
   }
 }
 

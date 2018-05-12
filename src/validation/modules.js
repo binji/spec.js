@@ -184,7 +184,7 @@ function startIsValid(C, start) {
 
   // * The type of `C.funcs[x]` must be `[] → []`.
   let func = C.getFunc(x);
-  validationErrorUnless(func.params.length == 0 && funcs.results.length == 0,
+  validationErrorUnless(func.params.length == 0 && func.results.length == 0,
       `The type of the start function (C.funcs[${x}]) must be [] → []`);
 
   // * Then the start function is valid.
@@ -481,7 +481,7 @@ function moduleIsValid(module) {
 
   // * If module.start is non-empty, then module.start must be valid.
   if (module.start) {
-    startIsValid(module.start);
+    startIsValid(C, module.start);
   }
 
   // * For each `exportᵢ` in `module.exports`, the segment `exportᵢ` must be

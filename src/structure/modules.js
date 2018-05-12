@@ -51,6 +51,23 @@ class Module {
     this.imports = imports;
     this.exports = exports;
   }
+
+  toString() {
+    return `{
+  types [${this.types.join(', ')}],
+  funcs [
+    ${this.funcs.join(',\n    ')}
+  ]
+  tables [${this.tables.join(', ')}],
+  mems [${this.mems.join(', ')}],
+  globals [${this.globals.join(', ')}],
+  elem [${this.elem.join(', ')}],
+  data [${this.data.join(', ')}],
+  start ${this.start ? this.start : 'ϵ'},
+  imports ${this.imports.join(', ')},
+  exports ${this.exports.join(', ')}
+}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#functions
@@ -66,6 +83,10 @@ class Func {
     this.locals = locals;
     this.body = body;
   }
+
+  toString() {
+    return `{type ${this.type}, locals [${this.locals}], body ${this.body}}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#tables
@@ -77,6 +98,10 @@ class Table {
     assert(isInstance(type, TableType));
     this.type = type;
   }
+
+  toString() {
+    return `{type ${this.type}}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#memories
@@ -87,6 +112,10 @@ class Mem {
   constructor({type}) {
     assert(isInstance(type, MemType));
     this.type = type;
+  }
+
+  toString() {
+    return `{type ${this.type}}`;
   }
 }
 
@@ -100,6 +129,10 @@ class Global {
     assert(isInstance(init, Expr));
     this.type = type;
     this.init = init;
+  }
+
+  toString() {
+    return `{type ${this.type}, init ${this.init}}`;
   }
 }
 
@@ -116,6 +149,10 @@ class Elem {
     this.offset = offset;
     this.init = init;
   }
+
+  toString() {
+    return `{table ${this.table}, offset ${this.offset}, init [${this.init.join(', ')}]}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#data-segments
@@ -131,6 +168,10 @@ class Data {
     this.offset = offset;
     this.init = init;
   }
+
+  toString() {
+    return `{data ${this.data}, offset ${this.offset}, init [${this.init.join(', ')}]}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#start-function
@@ -139,8 +180,12 @@ class Data {
 //
 class Start {
   constructor({func}) {
-    assert(isOptionalInstance(func, Func));
+    assert(isIndex(func));
     this.func = func;
+  }
+
+  toString() {
+    return `{func ${this.func}}`;
   }
 }
 
@@ -155,6 +200,10 @@ class Export {
     this.name = name;
     this.desc = desc;
   }
+
+  toString() {
+    return `{name ${this.name}, desc ${this.desc}}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#exports
@@ -168,6 +217,10 @@ class ExportDesc {
     assert(isIndex(idx));
     this.kind = kind;
     this.idx = idx;
+  }
+
+  toString() {
+    return `${this.kind} ${this.idx}`;
   }
 }
 
@@ -220,6 +273,10 @@ class Import {
     this.name = name;
     this.desc = desc;
   }
+
+  toString() {
+    return `{module ${this.module}, name ${this.name}, desc ${this.desc}}`;
+  }
 }
 
 // http://webassembly.github.io/spec/core/syntax/modules.html#imports
@@ -251,6 +308,22 @@ class ImportDesc {
         assert(isInstance(value, GlobalType));
         this.globaltype = value;
         break;
+    }
+  }
+
+  toString() {
+    switch (this.kind) {
+      case 'func':
+        return `${this.kind} ${this.typeidx}`;
+
+      case 'table':
+        return `${this.kind} ${this.tabletype}`;
+
+      case 'mem':
+        return `${this.kind} ${this.memtype}`;
+
+      case 'global':
+        return `${this.kind} ${this.globaltype}`;
     }
   }
 }
