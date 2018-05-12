@@ -47,6 +47,16 @@ class CtrlFrame {
   }
 }
 
+function toValTypeArray(types) {
+  assert(isInstance(types, ResultType) || isArrayOfInstance(types, ValType));
+
+  if (isInstance(types, ResultType)) {
+    return types.toArray();
+  } else {
+    return types;
+  }
+}
+
 // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
 //
 //     type val_type = I32 | I64 | F32 | F64
@@ -101,7 +111,8 @@ class ValidationAlgorithm {
     }
 
     // error_if(actual =/= expect)
-    validationErrorIf(actual !== expect, 'actual ≠ expect');
+    validationErrorIf(actual !== expect,
+        `actual (${actual}) ≠ expect (${expect})`);
 
     // return actual
     return actual;
@@ -109,7 +120,7 @@ class ValidationAlgorithm {
 
   // func push_opds(types : list(val_type)) =
   pushOpds(types) {
-    assert(isArrayOfInstance(types, ValType));
+    types = toValTypeArray(types);
 
     // foreach (t in types) push_opd(t)
     for (let t of types) {
@@ -119,7 +130,7 @@ class ValidationAlgorithm {
 
   // func pop_opds(types : list(val_type)) =
   popOpds(types) {
-    assert(isArrayOfInstance(types, ValType));
+    types = toValTypeArray(types);
 
     // foreach (t in reverse(types)) pop_opd(t)
     let reversed = types.slice();
@@ -132,8 +143,8 @@ class ValidationAlgorithm {
 
   // func push_ctrl(label : list(val_type), out : list(val_type)) =
   pushCtrl(label, out) {
-    assert(isArrayOfInstance(label, ValType));
-    assert(isArrayOfInstance(out, ValType));
+    label = toValTypeArray(label);
+    out = toValTypeArray(out);
 
     // let frame = ctrl_frame(label, out, opds.size(), false)
     let frame = new CtrlFrame(label, out, this.opds.length, false);
@@ -157,7 +168,7 @@ class ValidationAlgorithm {
 
     // error_if(opds.size() =/= frame.height)
     validationErrorIf(this.opds.length !== frame.height,
-        'operand stack size ≠ frame height');
+        `operand stack size (${this.opds.length}) ≠ frame height (${frame.height})`);
 
     // N.B. frame should be popped here.
     this.ctrls.shift();
@@ -173,5 +184,15 @@ class ValidationAlgorithm {
 
     // ctrls[0].unreachable := true
     this.ctrls[0].unreachable = true;
+  }
+
+  isLabel(idx) {
+    assert(isIndex(idx));
+    return idx < this.ctrls.length;
+  }
+
+  getLabel(idx) {
+    assert(this.isLabel(idx));
+    return new ResultType(this.ctrls[idx].labelTypes[0]);
   }
 }

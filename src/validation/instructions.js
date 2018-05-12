@@ -22,7 +22,7 @@ function instrSequenceIsValidWithResultType(C, instrs, label, resulttype) {
   assert(isInstance(label, ResultType));
   assert(isInstance(resulttype, ResultType));
 
-  C.pushCtrl(label.toArray(), resulttype.toArray());
+  C.pushCtrl(label, resulttype);
 
   for (let instr of instrs) {
     instrIsValid(C, instr);
@@ -257,6 +257,8 @@ function getLocalInstrIsValid(C, instr) {
   //
   //     get_local x
   //
+  let {idx: x} = instr;
+
   // * The local `C.locals[x]` must be defined in the context.
   validationErrorUnless(C.isLocal(x),
       `The local C.locals[${x}] must be defined in the context.`);
@@ -273,6 +275,8 @@ function setLocalInstrIsValid(C, instr) {
   //
   //     set_local x
   //
+  let {idx: x} = instr;
+
   // * The local `C.locals[x]` must be defined in the context.
   validationErrorUnless(C.isLocal(x),
       `The local C.locals[${x}] must be defined in the context.`);
@@ -289,6 +293,8 @@ function teeLocalInstrIsValid(C, instr) {
   //
   //     set_local x
   //
+  let {idx: x} = instr;
+
   // * The local `C.locals[x]` must be defined in the context.
   validationErrorUnless(C.isLocal(x),
       `The local C.locals[${x}] must be defined in the context.`);
@@ -307,6 +313,8 @@ function getGlobalInstrIsValid(C, instr) {
   //
   //     get_global x
   //
+  let {idx: x} = instr;
+
   // * The global `C.globals[x]` must be defined in the context.
   validationErrorUnless(C.isGlobal(x),
       `The global C.globals[${x}] must be defined in the context.`);
@@ -323,6 +331,8 @@ function setGlobalInstrIsValid(C, instr) {
   //
   //     set_global x
   //
+  let {idx: x} = instr;
+
   // * The global `C.globals[x]` must be defined in the context.
   validationErrorUnless(C.isGlobal(x),
       `The global C.globals[${x}] must be defined in the context.`);

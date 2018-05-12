@@ -111,6 +111,24 @@ class Context {
     return this.globals[idx];
   }
 
+  isLocal(idx) {
+    assert(isIndex(idx));
+    return idx < this.locals.length;
+  }
+
+  getLocal(idx) {
+    assert(this.isLocal(idx));
+    return this.locals[idx];
+  }
+
+  isLabel(idx) {
+    return this.v.isLabel(idx);
+  }
+
+  getLabel(idx) {
+    return this.v.getLabel(idx);
+  }
+
   // http://webassembly.github.io/spec/core/appendix/algorithm.html#data-structures
   pushOpd(type) {
     return this.v.pushOpd(type);

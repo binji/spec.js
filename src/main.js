@@ -25,15 +25,26 @@ load('validation/modules.js');
 load('appendix/algorithm.js');
 
 let t0 = new FuncType([], [ValType.i32]);
+let t1 = new FuncType([], []);
 let f0 = new Func({type: 0, locals: [], body: new Expr([
   instrs.get('i32.const')(1),
   instrs.get('i32.const')(2),
   instrs.get('i32.add'),
 ])});
 
+let f1 = new Func({type: 1, locals: [ValType.f32], body: new Expr([
+  instrs.get('block')(new ResultType(ValType.f32), [
+    instrs.get('i32.const')(0),
+    instrs.get('br')(0),
+    instrs.get('br')(1),
+    instrs.get('get_local')(0),
+  ]),
+  instrs.get('drop'),
+])});
+
 let m0 = new Module({
-  types: [t0],
-  funcs: [f0],
+  types: [t0, t1],
+  funcs: [f0, f1],
   tables: [],
   mems: [],
   globals: [],
