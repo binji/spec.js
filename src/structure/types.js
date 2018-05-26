@@ -59,7 +59,7 @@ class ResultType {
   }
 
   toString() {
-    return `[${this.valtype}]`;
+    return isUndefined(this.valtype) ? `[]` : `[${this.valtype}]`;
   }
 }
 

@@ -52,6 +52,21 @@ let f1 = new Func({
   ])
 });
 
+let f2 = new Func({
+  type: 0,
+  locals: [],
+  body: new Expr([
+    instrs.get('block')(
+      new ResultType(ValType.i32),
+      [
+        instrs.get('i32.const')(0),
+        instrs.get('i32.const')(1),
+        instrs.get('br_table')([1, 0], 0),
+      ]
+    )
+  ])
+});
+
 let T0 = new Table({type: new TableType(new Limits(1), ElemType.anyfunc)});
 
 let m0 = new Mem({type: new MemType(new Limits(1))});
@@ -85,7 +100,7 @@ let ex0 = new Export({name: 'f1', desc: new ExportDesc('func', 1)});
 
 let M0 = new Module({
   types: [t0, t1],
-  funcs: [f0, f1],
+  funcs: [f0, f1, f2],
   tables: [T0],
   mems: [m0],
   globals: [g0],

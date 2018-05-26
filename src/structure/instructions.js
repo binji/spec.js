@@ -595,7 +595,7 @@ instrs.set('br_if', (labelidx) => new BranchInstr('br_if', labelidx));
 //
 class BrTableInstr extends BranchInstr {
   constructor(labelidxs, labelidx) {
-    assert(isArrayWithEvery(labelidx, i => isIndex(i)));
+    assert(isArrayWithEvery(labelidxs, i => isIndex(i)));
     assert(isIndex(labelidx));
     super('br_table', labelidx);
     this.labelidxs = labelidxs;

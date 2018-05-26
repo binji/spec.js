@@ -553,7 +553,9 @@ function brTableInstrIsValid(C, instr) {
         `The label C.labels[${l_i}] must be defined in the context.`);
 
     // * For all lᵢ in l*, `C.labels[lᵢ]` must be t?.
-    // TODO
+    let resultType_i = C.getLabel(l_i);
+    validationErrorUnless(resultType_i.equals(t),
+        `The label lᵢ (${resultType_i}) must be t? (${t}).`);
   }
 
   // * Then the instruction is valid with type [t₁* t? i32] -> [t₂*], for any
