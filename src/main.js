@@ -30,9 +30,9 @@ let f0 = new Func({
   type: 0,
   locals: [],
   body: new Expr([
-    instrs.get('i32.const')(1),
-    instrs.get('i32.const')(2),
-    instrs.get('i32.add'),
+    Instr.I32Const(1),
+    Instr.I32Const(2),
+    Instr.I32Add(),
   ])
 });
 
@@ -40,15 +40,15 @@ let f1 = new Func({
   type: 1,
   locals: [ValType.f32],
   body: new Expr([
-    instrs.get('block')(
+    Instr.Block(
         new ResultType(ValType.f32),
         [
-          instrs.get('f32.const')(0),
-          instrs.get('br')(0),
-          instrs.get('br')(1),
-          instrs.get('get_local')(0),
+          Instr.F32Const(0),
+          Instr.Br(0),
+          Instr.Br(1),
+          Instr.GetLocal(0),
         ]),
-    instrs.get('drop'),
+    Instr.Drop(),
   ])
 });
 
@@ -56,12 +56,12 @@ let f2 = new Func({
   type: 0,
   locals: [],
   body: new Expr([
-    instrs.get('block')(
+    Instr.Block(
       new ResultType(ValType.i32),
       [
-        instrs.get('i32.const')(0),
-        instrs.get('i32.const')(1),
-        instrs.get('br_table')([1, 0], 0),
+        Instr.I32Const(0),
+        Instr.I32Const(1),
+        Instr.BrTable([1, 0], 0),
       ]
     )
   ])
@@ -74,19 +74,19 @@ let m0 = new Mem({type: new MemType(new Limits(1))});
 let g0 = new Global({
   type: new GlobalType(Mut.var, ValType.i32),
   init: new Expr([
-    instrs.get('get_global')(0),
+    Instr.GetGlobal(0),
   ])
 });
 
 let e0 = new Elem({
   table: 0,
-  offset: new Expr([instrs.get('i32.const')(5)]),
+  offset: new Expr([Instr.I32Const(5)]),
   init: [0, 1, 0, 1]
 });
 
 let d0 = new Data({
   data: 0,
-  offset: new Expr([instrs.get('i32.const')(1)]),
+  offset: new Expr([Instr.I32Const(1)]),
   init: [1, 2, 3, 4, 5],
 });
 
